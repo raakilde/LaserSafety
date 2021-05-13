@@ -2,6 +2,7 @@
 // First we include the libraries
 #include <OneWire.h> 
 #include <DallasTemperature.h>
+#include <LiquidCrystal_I2C.h>
 /********************************************************************/
 // Data wire is plugged into pin 3 on the Arduino 
 #define ONE_WIRE_BUS 3
@@ -34,17 +35,29 @@ bool lidOpen = false;
 bool noWarning = false;
 bool noWarningOldState = false;
 
+LiquidCrystal_I2C lcd(0x27,16,2); // set the LCD address to 0x27 for a 16 chars and 2 line display
+const String displayLineOne("Flow:0000 l/h ST");
+const String displayLineTwo("Temp:00.00 Lid:1");
+const String errorDetected("ST");
+const String noErrorDetected("OK");
+
 void flow () // Interrupt function
 {
-   flow_frequency++;
+  flow_frequency++;
 }
 
 
 void setup(void) 
 { 
-  // start serial port 
-  Serial.begin(9600); 
-  Serial.println("Dallas Temperature IC Control Library Demo"); 
+  lcd.init(); // initialize the lcd
+  lcd.backlight();
+  lcd.clear();
+  String version("Laser Heat");
+  String version2("Control V1.0");
+  lcd.setCursor(0,0); // Move cursor to 0,0 (first line, first column)
+  lcd.print(version);
+  lcd.setCursor(0,1); // Move cursor to 0,0 (first line, first column)
+  lcd.print(version2);
   // Start up the library 
   sensors.begin(); 
 
@@ -58,6 +71,13 @@ void setup(void)
 
   pinMode(SWTICH_PIN, INPUT);
   pinMode(ABORT_PIN, OUTPUT);
+  delay(5000);
+
+  
+  lcd.setCursor(0,0); // Move cursor to 0,0 (first line, first column)
+  lcd.print(displayLineOne);
+  lcd.setCursor(0,1); // Move cursor to 0,0 (first line, first column)
+  lcd.print(displayLineTwo);
 } 
 
 void HandleWarning(String * error)
@@ -124,13 +144,31 @@ void loop(void)
     Serial.print(temperature);
     Serial.print(", LID open: "); 
     Serial.println(lidOpen);
+
+    lcd.setCursor(5,0); // Move cursor to 0,5 (first line, first column)
+    char buffer[4] = {0};
+    sprintf(buffer, "%04d", l_hour);
+    lcd.print(buffer);
+    lcd.setCursor(5,1); // Move cursor to 1,5 (first line, first column)
+    lcd.print(temperature);
+    lcd.setCursor(15,1); // Move cursor to 1,5 (first line, first column)
+    lcd.print(lidOpen);
   }
 
   if (noWarning != noWarningOldState)
   {
     noWarningOldState = noWarning;
     digitalWrite(ABORT_PIN, noWarningOldState);
-    Serial.println("Relay state");
+    lcd.setCursor(14,0); // Move cursor to 1,5 (first line, first column)
+
+    if(noWarningOldState == true)
+    {
+      lcd.print(noErrorDetected);
+    }
+    else
+    {
+      lcd.print(errorDetected);
+    }
   }
   //  if(currentTime >= (cloopTime + 1000))
   //  {
